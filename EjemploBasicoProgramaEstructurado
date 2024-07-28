@@ -1,0 +1,29 @@
+
+°°Representación de los bloques de código en AllyDocket
+
+
+
+VAR{
+    °° Espacio para definir variables
+	categoria entero Sueldo=0;
+	categoria texto    Nombre="";
+	categoria entero  impuesto=0;
+}
+
+CLASE{
+°°Aquí va todo lo de clases
+	FUNCION{
+	°° Aquí va todo lo de funciones/métodos
+		recorte(
+			restar(sueldo-impuesto);
+		            )
+	}
+
+	INICIO{
+	°°Punto de entrada principal del programa
+		FUNCION.recorte(400,16)
+	}FIN
+}
+
+
+
