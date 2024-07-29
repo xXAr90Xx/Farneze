@@ -69,6 +69,7 @@ public class Compilador extends javax.swing.JFrame {
     private boolean codeHasBeenCompiled = false;
     private HashMap<String, String[]> tablaSimbolos;
     DefaultTableModel tablaS;
+    HashMap<String, String> identDataType = new HashMap<>();
     Grammar gramatica;
     private ScopeManager scopeManager;
 
@@ -870,7 +871,6 @@ public class Compilador extends javax.swing.JFrame {
 
             // Análisis semántico
             semanticAnalysis();
-
             printConsole();
         } catch (Exception e) {
             e.printStackTrace();
@@ -1048,73 +1048,75 @@ public class Compilador extends javax.swing.JFrame {
 
     public void syntacticAnalysis() {
         gramatica = new Grammar(tokens, erroresSintacticos);
-        
-        // Elementos básicos
-        gramatica.group("tipo", "ENTERO | DECIMAL | BOOLEANO | TEXTO");
-        gramatica.group("valor", "NUMERO | NDECIMAL | CADENA | VERDADERO | FALSO | lista | IDENTIFICADOR");
-        gramatica.group("operando", "IDENTIFICADOR | NUMERO | NDECIMAL");
-
-        // Listas 
-        gramatica.group("lista_enteros", "CORCHETE_ABIERTO NUMERO (SEPARADOR NUMERO)* CORCHETE_CERRADO");
-        gramatica.group("lista_decimales", "CORCHETE_ABIERTO NDECIMAL (SEPARADOR NDECIMAL)* CORCHETE_CERRADO");
-        gramatica.group("lista", "lista_enteros | lista_decimales");
-
-        // Generación de mapa
-        gramatica.group("funcion_generar_mapa", "GENERAR_MAPA PARA IDENTIFICADOR PARC");
-
-        // Comparación
-        gramatica.group("comparacion", "(MAYOR | MENOR | IGUAL | DIFERENTE) PARA operando SEPARADOR (operando | CADENA) PARC", compProd);
-
+        gramatica.delete(new String[]{"ERROR", "ERROR_1", "Error_2"}, 1);
+        gramatica.initialLineColumn();
+        // Gramática para definición de variables
+        gramatica.group("variable", "(BOOLEANO | TEXTO | DECIMAL | ENTERO) IDENTIFICADOR ASIGNACION ( CADENA |NDECIMAL|NUMERO|FALSO|VERDADERO) FINLINEA", identProd);
+        gramatica.group("variable", "IDENTIFICADOR ASIGNACION ( CADENA |NDECIMAL|NUMERO|FALSO|VERDADERO) FINLINEA", 103, "Error Sintactico {}: Falta colocar el tipo de dato a definir [#,%]");
+        gramatica.group("variable", "(BOOLEANO | TEXTO | DECIMAL | ENTERO) ASIGNACION ( CADENA | NUMERO|NDECIMAL|FALSO|VERDADERO) FINLINEA", 104, "Error Sintactico {}: Falta colocar el identificador de la variable a definir [#,%]");
+        gramatica.group("variable", "(BOOLEANO | TEXTO | DECIMAL | ENTERO) IDENTIFICADOR ( CADENA | NUMERO|NDECIMAL|FALSO|VERDADERO) FINLINEA", 105, "Error Sintactico {}: Falta colocar la asignacion --> '='  [#,%]");
+        gramatica.group("variable", "(BOOLEANO | TEXTO | DECIMAL | ENTERO) IDENTIFICADOR ASIGNACION FINLINEA", 106, "Error Sintactico {}: Falta colocar el valor a asignar [#,%]");
+        gramatica.group("variable", "(BOOLEANO | TEXTO | DECIMAL | ENTERO) IDENTIFICADOR ASIGNACION (CADENA | NUMERO|NDECIMAL|FALSO|VERDADERO)", 107, "Error Sintactico {}: Falta colocar el fin de linea --> ; [#,%]");
+        gramatica.finalLineColumn();
         // Operaciones básicas
-        gramatica.group("operacion", "(SUMA | RESTA | MULTIPLICACION | DIVISION) PARA operando SEPARADOR operando PARC", opProd);
-
-        // Asignación
-        gramatica.group("asignacion", "IDENTIFICADOR ASIGNACION (valor | operacion | funcion_generar_mapa)", asigProd);
-
+        gramatica.initialLineColumn();
+        gramatica.group("operacion", "(SUMA | RESTA | MULTIPLICACION | DIVISION) PARA (IDENTIFICADOR | NUMERO | NDECIMAL) SEPARADOR (IDENTIFICADOR | NUMERO | NDECIMAL) PARC", opProd);
+        gramatica.group("operacion", "PARA (IDENTIFICADOR | NUMERO | NDECIMAL) SEPARADOR (IDENTIFICADOR | NUMERO | NDECIMAL) PARC", 200, "Error Sintactico {}: Falta colocar el tipo de operacion a realizar [#,%]");
+        gramatica.group("operacion", "(SUMA | RESTA | MULTIPLICACION | DIVISION) PARA (IDENTIFICADOR | NUMERO | NDECIMAL)  (IDENTIFICADOR | NUMERO | NDECIMAL) PARC", 200, "Error Sintactico {}: Falta colocar el separador de los operandos[#,%]");
+        gramatica.group("operacion", "(SUMA | RESTA | MULTIPLICACION | DIVISION) PARA (IDENTIFICADOR | NUMERO | NDECIMAL) SEPARADOR  PARC", 200, "Error Sintactico {}: Falta colocar el operador derecho[#,%]");
+        gramatica.group("operacion", "(SUMA | RESTA | MULTIPLICACION | DIVISION) PARA SEPARADOR (IDENTIFICADOR | NUMERO | NDECIMAL) PARC", 200, "Error Sintactico {}: Falta colocar el operador izquierdo[#,%]");
+        gramatica.group("operacion", "(SUMA | RESTA | MULTIPLICACION | DIVISION)  (IDENTIFICADOR | NUMERO | NDECIMAL) SEPARADOR (IDENTIFICADOR | NUMERO | NDECIMAL) PARC", 200, "Error Sintactico {}: Falta colocar el parentesis de apertura[#,%]");
+        gramatica.group("operacion", "(SUMA | RESTA | MULTIPLICACION | DIVISION) PARA (IDENTIFICADOR | NUMERO | NDECIMAL) SEPARADOR (IDENTIFICADOR | NUMERO | NDECIMAL) ", 200, "Error Sintactico {}: Falta colocar el parentesis de cierre[#,%]");
+         // Gramática para comparaciones         0                                               1                                                                                           2
+        gramatica.group("comparacion", "(IDENTIFICADOR | NUMERO) (IGUALDAD | DESIGUALDAD | MENORQUE | MAYORIGUALQUE | MENORIGUALQUE | MAYORQUE | ANDLOGICO | ORLOGICO | NOTLOGICO) (IDENTIFICADOR | NUMERO)", compProd);
+        gramatica.group("comparacion", "(IGUALDAD | DESIGUALDAD | MENORQUE | MAYORIGUALQUE | MENORIGUALQUE | MAYORQUE | ANDLOGICO | ORLOGICO | NOTLOGICO) (IDENTIFICADOR | NUMERO)", 100, "Error Sintactico {}: Falta colocar el primer valor [#,%]");
+        gramatica.group("comparacion", "(IDENTIFICADOR | NUMERO) (IDENTIFICADOR | NUMERO)", 101, "Error Sintactico {}: Falta colocar la operacion de comparacion [#,%]");
+        gramatica.group("comparacion", "(IDENTIFICADOR | NUMERO) (IGUALDAD | DESIGUALDAD | MENORQUE | MAYORIGUALQUE | MENORIGUALQUE | MAYORQUE | ANDLOGICO | ORLOGICO | NOTLOGICO)", 102, "Error Sintactico {}: Falta colocar el valor a comparar [#,%]");
+// Generación de mapa
+        gramatica.finalLineColumn();
+        gramatica.initialLineColumn();
+        gramatica.group("funcion_generar_mapa", "generar_mapa PARA IDENTIFICADOR PARC");
+        gramatica.finalLineColumn();
+        //         Asignación
+        gramatica.initialLineColumn();
+        gramatica.group("asignacion", "IDENTIFICADOR ASIGNACION (CADENA |NDECIMAL|NUMERO|FALSO|VERDADERO| operacion |funcion_generar_mapa )", asigProd);
+        gramatica.finalLineColumn();
         // Imprimir
-        gramatica.group("contenido_imprimir", "IDENTIFICADOR | CADENA");
-        gramatica.group("imprimir", "IMPRIMIR PARA contenido_imprimir (SEPARADOR contenido_imprimir)* PARC", imprimirProd);
-
+        gramatica.initialLineColumn();
+        gramatica.group("imprimir", "IMPRIMIR PARA (IDENTIFICADOR | CADENA) (SEPARADOR contenido_imprimir)* PARC", imprimirProd);
+        gramatica.finalLineColumn();
+        // Instrucciones
+        gramatica.group("instruccion", "imprimir| operacion | asignacion|funcion_generar_mapa");
         // Estructuras de control
-        gramatica.group("estructura_si", "SI PARA comparacion PARC CORA instrucciones CORC (SINO CORA instrucciones CORC)?", ifProd);
-        gramatica.group("estructura_mientras", "MIENTRAS PARA comparacion PARC CORA instrucciones CORC", mientrasProd);
+        gramatica.initialLineColumn();
+        gramatica.loopForFunExecUntilChangeNotDetected(() -> {
+            //0   1        2         3     4                           5                            6
+            gramatica.group("estructura_si", "SI PARA comparacion PARC CORA (instruccion| estructura_si | estructura_mientras)* CORC (SINO CORA (instruccion| estructura_si | estructura_mientras)* CORC)?", ifProd);
+        });
+        gramatica.finalLineColumn();
+        gramatica.group("estructura_mientras", "MIENTRAS PARA comparacion PARC CORA (instruccion| estructura_si | estructura_mientras)* CORC", mientrasProd);
 
         gramatica.group("estructura_control", "estructura_si | estructura_mientras");
+        // Gramática para bloque de variables
+        gramatica.initialLineColumn();
+        gramatica.group("bloque_variables", "VARIABLES CORA (variable)* CORC");
+        gramatica.group("bloque_variables", "VARIABLES (variable)* CORC", 2001, "Error Sintáctico: Falta la llave de apertura '{' en el bloque de variables [#,%]");
+        gramatica.group("bloque_variables", "VARIABLES CORA (variable)*", 2002, "Error Sintáctico: Falta la llave de cierre '}' en el bloque de variables [#,%]");
+        gramatica.finalLineColumn();
 
-        // Instrucciones
-        gramatica.group("instruccion", "imprimir | operacion | asignacion | estructura_control");
-        gramatica.group("instrucciones", "instruccion+");
+        // Gramática para bloque de procesos
+        gramatica.initialLineColumn();
+        gramatica.group("bloque_procesos", "PROCESOS CORA (instruccion|estructura_control)* CORC ");
+        gramatica.group("bloque_procesos", "PROCESOS CORA ", 3001, "Error Sintáctico: Falta la llave de cierre '}' en el bloque de procesos [#,%]");
+        gramatica.group("bloque_procesos", "PROCESOS  CORC", 3002, "Error Sintáctico: Falta la llave de apertura '{' en el bloque de procesos [#,%]");
+        gramatica.finalLineColumn();
 
-        // Declaraciones de variables
-        gramatica.group("declaracion", "tipo IDENTIFICADOR ASIGNACION valor FINLINEA", identProd);
-        gramatica.group("declaraciones", "declaracion+");
-
-        // Bloque de variables
-        gramatica.group("bloque_variables", "VARIABLES CORA declaraciones CORC");
-
-        // Bloque de procesos
-        gramatica.group("bloque_procesos", "PROCESOS CORA instrucciones CORC");
-
-        // Programa completo
-        gramatica.group("programa", "bloque_variables bloque_procesos", mainProd);
-
-        // Manejo de errores sintácticos
-        gramatica.group("bloque_variables", "VARIABLES declaraciones CORC", 2001, "Error Sintáctico: Falta la llave de apertura '{' en el bloque de variables [#,%]");
-        gramatica.group("bloque_variables", "VARIABLES CORA declaraciones", 2002, "Error Sintáctico: Falta la llave de cierre '}' en el bloque de variables [#,%]");
-        gramatica.group("bloque_procesos", "PROCESOS CORA instrucciones", 3001, "Error Sintáctico: Falta la llave de cierre '}' en el bloque de procesos [#,%]");
-        gramatica.group("bloque_procesos", "PROCESOS instrucciones CORC", 3002, "Error Sintáctico: Falta la llave de apertura '{' en el bloque de procesos [#,%]");
-        gramatica.group("estructura_si", "SI comparacion PARC CORA instrucciones CORC", 4001, "Error Sintáctico: Falta el paréntesis de apertura '(' después de SI [#,%]");
-        gramatica.group("estructura_si", "SI PARA comparacion CORA instrucciones CORC", 4002, "Error Sintáctico: Falta el paréntesis de cierre ')' después de la condición en SI [#,%]");
-        gramatica.group("estructura_mientras", "MIENTRAS comparacion PARC CORA instrucciones CORC", 5001, "Error Sintáctico: Falta el paréntesis de apertura '(' después de MIENTRAS [#,%]");
-        gramatica.group("estructura_mientras", "MIENTRAS PARA comparacion CORA instrucciones CORC", 5002, "Error Sintáctico: Falta el paréntesis de cierre ')' después de la condición en MIENTRAS [#,%]");
-
+        // Gramática para bloque programa
+        gramatica.group("programa", "bloque_variables bloque_procesos");
         gramatica.group("programa", "bloque_variables", 1001, "Error Sintáctico: Falta el bloque de procesos [#,%]");
         gramatica.group("programa", "bloque_procesos", 1002, "Error Sintáctico: Falta el bloque de variables [#,%]");
 
-        gramatica.delete(new String[]{"ERROR", "ERROR_1", "Error_2"}, 1);
         gramatica.show();
-
-      
 
     }
 
@@ -1180,8 +1182,9 @@ public class Compilador extends javax.swing.JFrame {
 
     /**
      * ***************************************************************************
+     * //
      */
-    /*                     Analizador Semantico                                   */
+//    /*                     Analizador Semantico                                   */
     public void semanticAnalysis() {
         semanticErrors.clear();
         scopeManager = new ScopeManager();
@@ -1195,7 +1198,6 @@ public class Compilador extends javax.swing.JFrame {
         // Verificar variables no utilizadas
         checkUnusedVariables();
     }
-
     private void printSemanticErrors() {
         StringBuilder output = new StringBuilder();
         if (semanticErrors.isEmpty()) {
@@ -1211,25 +1213,103 @@ public class Compilador extends javax.swing.JFrame {
     }
 
     private void analyzeVariableDeclarations() {
-        for (Production p : identProd) {
-            List<Token> tokens = p.getTokens();
-            if (tokens.size() >= 4) {
-                String type = tokens.get(0).getLexeme();
-                String ident = tokens.get(1).getLexeme();
-                String value = tokens.get(3).getLexeme();
+      
+        // Definición de tipos de datos--------------------------------------------------------------------------------------------------------------
+        //llave    //valor
+        identDataType.put("BOOLEANO", "BOOLEANO");
+        identDataType.put("TEXTO", "TEXTO");
+        identDataType.put("DECIMAL", "DECIMAL");
+        identDataType.put("ENTERO", "ENTERO");
+        // Errores Tipos de datos incompatibles con las variables
+        for (Production id : identProd) {
+            String tipoDato = id.lexemeRank(0);
+            String valorAsignado = id.lexemeRank(3);
+            verificarCompatibilidadTipo(tipoDato, valorAsignado, id);
+            // Verificar si la variable ya está en el conjunto de identificadores
+            String variable = id.lexemeRank(1); //Almacenar variable temporal con el lexema osease el identificador como tal Ejemplo #C3
+            if (identificadores.containsKey(variable))//Utilizamos el identificador para buscar duplicados en el HashMap de iidentificadores ya guardados
+            {
+                //Si encuentra duplicados emite el error y lo almacena tambien
+                System.out.println("Error: Variable duplicada = " + variable);
+                errors.add(new ErrorLSSL(2, "Error semántico {}: declaracion de variable duplicada [#,%] = " + variable.concat(""), id, false));
+            } else {
+                //Cuando no se detecta ningun error se agregan a los respectivos HashMap y Tabla de Simbolos
+                identificadores.put(id.lexemeRank(1), tipoDato);
+                //LLAVE       VALOR[tipoDato, valor]
+                String[] datos = {tipoDato, valorAsignado};
+                //#A        //ENTERO  //12
+                tablaSimbolos.put(id.lexemeRank(1), datos);
+                //#A            //ENTERO
+                identificadores.put(id.lexemeRank(1), datos[0]);
+                String[] getDatos = tablaSimbolos.get(id.lexemeRank(1));
+                tablaS.addRow(new Object[]{id.lexemeRank(1), getDatos[0], getDatos[1]});//tambien se mandan a la tabla en la GUI
+//                
+//                GCI.generarCodigoIntermedio("ASIGNAR", datos[1], "", id.lexemeRank(1));//GENERAR CUADRUPLOS
+//                
+//                GCO.agregarVariable(id.lexemeRank(1), valorAsignado);
+//                
 
-                if (scopeManager.isInCurrentScope(ident)) {
-                    addSemanticError("Variable '" + ident + "' ya declarada en este ámbito", tokens.get(1).getLine());
-                } else {
-                    if (isTypeCompatible(type, value)) {
-                        VariableInfo info = new VariableInfo(type, value, tokens.get(1).getLine());
-                        scopeManager.declare(ident, info);
-                    } else {
-                        addSemanticError("Tipo incompatible para la variable '" + ident + "'. Se esperaba " + type, tokens.get(1).getLine());
-                    }
-                }
+                System.out.println("Agregado a la tabla de simbolos : " + identificadores.toString());
+
             }
+
+        }//for identProd
+        variableNoDeclarada();
+    }
+        private void verificarCompatibilidadTipo(String tipoDato, String valorAsignado, Production id) {
+        if (!identDataType.containsKey(tipoDato)) {
+            errors.add(new ErrorLSSL(1, "Error semántico {}: tipo de dato desconocido [#,%]", id, true));
+            return;
         }
+
+        String tipoEsperado = identDataType.get(tipoDato);
+        if (!tipoEsperado.equals(id.lexicalCompRank(0))) {
+            errors.add(new ErrorLSSL(1, "Error semántico {}: valor no compatible con el tipo de dato [#,%]", id, true));
+        } else {
+            validarValorAsignado(tipoDato, valorAsignado, id);
+        }
+    }
+        private void validarValorAsignado(String tipoDato, String valorAsignado, Production id) {
+        switch (tipoDato) {
+            case "ENTERO":
+                if (!valorAsignado.matches("[0-9]+")) {
+                    errors.add(new ErrorLSSL(1, "Error semántico {}: el valor no es un número entero [#,%]", id, false));
+                }
+                break;
+            case "TEXTO":
+                if (!valorAsignado.matches("\"[0-9]*[a-zA-Z]+\"")) {
+                    errors.add(new ErrorLSSL(1, "Error semántico {}: el valor no es una cadena [#,%]", id, false));
+                }
+                break;
+            case "DECIMAL":
+                if (!valorAsignado.matches("[+-]?([0-9]*[.])?[0-9]+([eE][+-]?[0-9]+)?")) {
+                    errors.add(new ErrorLSSL(1, "Error semántico {}: el valor no es un número flotante [#,%]", id, false));
+                }
+                break;
+            case "BOOLEANO":
+                if (!valorAsignado.matches("verdadero|falso")) {
+                    errors.add(new ErrorLSSL(1, "Error semántico {}: solo se acepta 'verdadero' o 'falso' [#,%]", id, false));
+                }
+                break;
+        }
+    }
+        private void variableNoDeclarada() {
+        int contador = 0;
+        // Error de variable siendo usada sin declararse------------------------------------------------------------------------------
+        if (!mainProd.isEmpty()) {
+            // Recorrer la producción principal en búsqueda de una variable
+            for (Token token : mainProd.get(0).getTokens()) {
+                if ("IDENTIFICADOR".equals(token.getLexicalComp())) {
+                    String lexema = token.getLexeme();
+                    if (!tablaSimbolos.containsKey(lexema)) {
+                        System.out.println("NO ESTA DECLARADA ESTA VARIABLE!!!= " + token.getLexeme());
+                        errors.add(new ErrorLSSL(3, "Error semántico {}: este identificador no está declarado [#,%] = " + token.getLexeme(), token));
+                    }
+                }//if
+
+            }//for
+            contador++;
+        }//if
     }
 
     private void analyzeProcessBlock() {

@@ -129,8 +129,25 @@ PalabrasReservadas = {GENERAR_MAPA}|{VARIABLES}|{PROCESOS}|{SI}|{SINO}|{MIENTRAS
     }
 }
 
+/* Switch para acceder a cada palabra reservada */
 {PalabrasReservadas} {
-    return token(yytext(), yytext(), yyline, yycolumn);
+    switch(yytext()) {
+        case "VARIABLES": return token(yytext(), "VARIABLES", yyline, yycolumn);
+        case "PROCESOS": return token(yytext(), "PROCESOS", yyline, yycolumn);
+        /* Operaciones básicas */
+        case "SI": return token(yytext(), "SI", yyline, yycolumn);
+        case "SINO": return token(yytext(), "SINO", yyline, yycolumn);
+        case "MIENTRAS": return token(yytext(), "MIENTRAS", yyline, yycolumn);
+        case "IMPRIMIR": return token(yytext(), "IMPRIMIR", yyline, yycolumn);
+        case "ENTERO": return token(yytext(), "ENTERO", yyline, yycolumn);
+        /* Operaciones avanzadas */
+        case "DECIMAL": return token(yytext(), "DECIMAL", yyline, yycolumn);
+        case "BOOLEANO": return token(yytext(), "BOOLEANO", yyline, yycolumn);
+        case "TEXTO": return token(yytext(), "TEXTO", yyline, yycolumn);
+        case "VERDADERO ": return token(yytext(), "VERDADERO ", yyline, yycolumn);
+        case "FALSO ": return token(yytext(), "FALSO", yyline, yycolumn);
+        case "GENERAR_MAPA ": return token(yytext(), "GENERAR_MAPA ", yyline, yycolumn);
+    }
 }
 
 {IDENTIFICADOR} { return token(yytext(), "IDENTIFICADOR", yyline, yycolumn); }
